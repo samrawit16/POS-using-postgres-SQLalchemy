@@ -1,0 +1,10 @@
+from .category import router as categories_router
+from .supplier import router as suppliers_router
+from .product import router as products_router
+from .inventory import router as inventory_router
+from .customer import router as customers_router
+from .user import router as users_router
+from .sale import router as sales_router
+from .sale_item import router as sale_items_router
+from .payment import router as payments_router
+from .receipt import router as receipts_router
