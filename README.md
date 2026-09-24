@@ -74,10 +74,10 @@ curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/products/
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                                   # SQLite, ~15 s
+pytest                                   
 pytest --cov=app --cov-report=term-missing
 
-# against real PostgreSQL (database name MUST contain "test": tables are dropped and recreated)
+
 TEST_DATABASE_URL=postgresql+psycopg2://user:pw@localhost:5432/pos_test pytest
 ```
 
