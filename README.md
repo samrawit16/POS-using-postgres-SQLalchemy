@@ -1,99 +1,381 @@
-# POS API (FastAPI + SQLAlchemy + PostgreSQL)
+# POS API
 
-Point-of-sale backend with JWT authentication, role-based access control, and a test suite
-that runs on SQLite (default) or real PostgreSQL.
+A secure **Point-of-Sale backend** built with **FastAPI, SQLAlchemy, and PostgreSQL**, featuring JWT authentication, role-based access control, input validation, brute-force protection, and automated tests.
 
-## Quick start
+## Features
+
+* JWT bearer authentication
+* Role-based access control
+* Admin, manager, and cashier roles
+* Argon2id password hashing
+* Login brute-force protection
+* PostgreSQL support
+* SQLite support for testing
+* Input validation and pagination
+* Security headers and CORS configuration
+* Production security settings
+* Automated test suite
+* Swagger/OpenAPI documentation in development
+
+## Tech Stack
+
+| Technology | Purpose                 |
+| ---------- | ----------------------- |
+| FastAPI    | REST API framework      |
+| SQLAlchemy | ORM and database access |
+| PostgreSQL | Production database     |
+| SQLite     | Default test database   |
+| JWT        | Authentication          |
+| Argon2id   | Password hashing        |
+| Pytest     | Testing                 |
+
+## Project Setup
+
+### 1. Create a virtual environment
 
 ```bash
-python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
-pip install -r requirements.txt                       # add requirements-dev.txt to run the tests
-
-cp .env.example .env                                  # then edit .env (never commit it)
-python -c "import secrets; print(secrets.token_urlsafe(64))"   # paste the output as SECRET_KEY
-
-python init_db.py                                     # create tables (also happens on app start)
-python create_admin.py                                # create the first admin (prompts; no public sign-up)
-uvicorn app.main:app --reload                         # http://127.0.0.1:8000/docs
+python -m venv venv
+source venv/bin/activate
 ```
 
-The app **refuses to start** if `DATABASE_URL` is missing, or `SECRET_KEY` is missing / shorter than
-32 bytes / a known placeholder. No database schema changes were made, so an existing database keeps working.
-
-## Authentication
+Windows:
 
 ```bash
-# 1. log in (form-encoded, so Swagger's "Authorize" button works too)
-curl -d "username=admin&password=YOUR_PASSWORD" http://127.0.0.1:8000/auth/login
-# -> {"access_token": "...", "token_type": "bearer"}
-
-# 2. send the token on every request
-curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/products/
+venv\Scripts\activate
 ```
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /auth/login` | username + password -> 30 min bearer token (configurable) |
-| `GET /auth/me` | who am I |
-| `POST /auth/change-password` | change own password; all older tokens stop working |
+### 2. Install dependencies
 
-## Roles
+```bash
+pip install -r requirements.txt
+```
 
-| Resource | admin | manager | cashier |
-|---|:-:|:-:|:-:|
-| Users (all operations) | yes | - | - |
-| Suppliers (all operations) | yes | yes | - |
-| Categories, products, inventory: read | yes | yes | yes |
-| Categories, products, inventory: create/update/delete | yes | yes | - |
-| Customers: read / create / update | yes | yes | yes (health field hidden, see below) |
-| Customers: delete | yes | yes | - |
-| Sales, sale items, payments, receipts: read / create | yes | yes | yes (own sales only) |
-| Sales, sale items, payments, receipts: update / delete | yes | yes | - |
-
-* Cashiers can only create sales as themselves and only add items/payments/receipts to **their own** sales.
-* Cashiers never see, and cannot set, a customer's `medical_conditions`.
-* The system always keeps at least one active admin (the last one can't be deleted, demoted or deactivated).
-
-## What is protected
-
-* **Passwords**: Argon2id; clients send `password`, the hash is never accepted from or returned to a client;
-  12-128 chars with a letter and a digit. Hashes are upgraded automatically at login if parameters change.
-* **Tokens**: signed JWT, algorithm pinned, `exp`/`iat`/`sub` required. Tokens are re-checked against the DB on
-  every request, so deactivating a user, changing a role, or changing a password takes effect immediately.
-* **Brute force**: 5 failed logins per username+IP -> 5 minute lockout (429). Unknown usernames cost the same work
-  as real ones, and error messages are identical, so usernames can't be enumerated.
-* **Default deny**: every router requires a valid token; a test fails if any endpoint is reachable without one.
-* **Input validation**: lengths match the DB columns, money is non-negative with the right precision, quantities are
-  positive, ids are bounded, PATCH-style updates can't null out required fields, list endpoints are paginated
-  (`?skip=&limit=`, max 500).
-* **Error hygiene**: constraint violations return a clean 409 (details are logged server-side only).
-* **HTTP**: security headers, CORS only for origins you list, `/docs` and `/openapi.json` disabled when
-  `ENVIRONMENT=production`, HSTS in production.
-
-## Tests
+For development and testing:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                                   
+```
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Generate a secure secret key:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+Add the generated value to `.env` as `SECRET_KEY`.
+
+The application requires:
+
+* `DATABASE_URL`
+* `SECRET_KEY` with at least 32 bytes
+* A non-placeholder secret key
+
+The application refuses to start if these required settings are missing or invalid.
+
+### 4. Initialize the database
+
+```bash
+python init_db.py
+```
+
+Tables are also created automatically when the application starts.
+
+### 5. Create the first admin
+
+```bash
+python create_admin.py
+```
+
+The command prompts for the administrator credentials. Public admin registration is not available.
+
+### 6. Start the API
+
+```bash
+uvicorn app.main:app --reload
+```
+
+API:
+
+```text
+http://127.0.0.1:8000
+```
+
+Swagger documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Authentication
+
+Login uses form-encoded credentials.
+
+```bash
+curl -d "username=admin&password=YOUR_PASSWORD" \
+  http://127.0.0.1:8000/auth/login
+```
+
+Response:
+
+```json
+{
+  "access_token": "YOUR_TOKEN",
+  "token_type": "bearer"
+}
+```
+
+Use the token for protected requests:
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://127.0.0.1:8000/products/
+```
+
+### Authentication Endpoints
+
+| Method | Endpoint                | Description                        |
+| ------ | ----------------------- | ---------------------------------- |
+| POST   | `/auth/login`           | Authenticate and receive a JWT     |
+| GET    | `/auth/me`              | Get the authenticated user         |
+| POST   | `/auth/change-password` | Change the current user's password |
+
+Access tokens expire after **30 minutes** by default.
+
+Changing a password invalidates older tokens immediately.
+
+## Roles & Permissions
+
+| Resource                                      | Admin | Manager | Cashier |
+| --------------------------------------------- | :---: | :-----: | :-----: |
+| Users                                         |   ✓   |    —    |    —    |
+| Suppliers                                     |   ✓   |    ✓    |    —    |
+| Categories — read                             |   ✓   |    ✓    |    ✓    |
+| Categories — write                            |   ✓   |    ✓    |    —    |
+| Products — read                               |   ✓   |    ✓    |    ✓    |
+| Products — write                              |   ✓   |    ✓    |    —    |
+| Inventory — read                              |   ✓   |    ✓    |    ✓    |
+| Inventory — write                             |   ✓   |    ✓    |    —    |
+| Customers — read/create/update                |   ✓   |    ✓    |    ✓    |
+| Customers — delete                            |   ✓   |    ✓    |    —    |
+| Sales — read/create                           |   ✓   |    ✓    |    ✓    |
+| Sale items — read/create                      |   ✓   |    ✓    |    ✓    |
+| Payments — read/create                        |   ✓   |    ✓    |    ✓    |
+| Receipts — read/create                        |   ✓   |    ✓    |    ✓    |
+| Sales/items/payments/receipts — update/delete |   ✓   |    ✓    |    —    |
+
+### Cashier Restrictions
+
+Cashiers:
+
+* Can only create sales for themselves.
+* Can only add items, payments, and receipts to their own sales.
+* Can only access their own sales.
+* Cannot view `medical_conditions`.
+* Cannot set or modify `medical_conditions`.
+
+The system always maintains at least one active administrator. The final active admin cannot be deleted, demoted, or deactivated.
+
+## Security
+
+### Password Protection
+
+Passwords are protected using **Argon2id**.
+
+Password requirements:
+
+* 12–128 characters
+* At least one letter
+* At least one digit
+
+Password hashes are never accepted from or returned to API clients.
+
+Existing password hashes can be automatically upgraded when hashing parameters change.
+
+### JWT Security
+
+Tokens use signed JWTs with:
+
+* Pinned signing algorithm
+* `exp`
+* `iat`
+* `sub`
+
+Tokens are checked against the database on every request.
+
+This means changes to:
+
+* User activation status
+* User role
+* Password
+
+take effect immediately.
+
+### Brute-Force Protection
+
+Login attempts are limited to:
+
+**5 failed attempts per username + IP address**
+
+After the limit is reached, the account/IP combination is locked for **5 minutes** and returns `429`.
+
+Unknown usernames use the same authentication work and return the same error message as invalid passwords to reduce username enumeration.
+
+### API Protection
+
+The API follows a **default-deny** security model.
+
+Protected routers require a valid authenticated user.
+
+Additional protections include:
+
+* Request validation
+* Bounded IDs
+* Positive quantities
+* Non-negative monetary values
+* Correct monetary precision
+* Maximum pagination limit of 500
+* PATCH validation that prevents required fields from becoming `NULL`
+* Clean `409` responses for database constraint violations
+* Server-side error logging
+* Security headers
+* Configurable CORS
+
+## Pagination
+
+List endpoints support:
+
+```text
+?skip=0&limit=100
+```
+
+The maximum allowed limit is:
+
+```text
+500
+```
+
+Example:
+
+```bash
+GET /products/?skip=0&limit=50
+```
+
+## Production Security
+
+Set:
+
+```env
+ENVIRONMENT=production
+```
+
+Before deployment:
+
+1. Generate a fresh random `SECRET_KEY`.
+2. Use HTTPS.
+3. Use `?sslmode=require` for remote PostgreSQL databases.
+4. Configure the reverse proxy to forward the real client IP.
+5. Run Uvicorn with appropriate proxy settings.
+6. Use a shared rate limiter such as Redis when running multiple workers or containers.
+7. Use a least-privilege PostgreSQL user.
+8. Keep database schema management separate from the application database user when appropriate.
+9. Use Alembic for future schema migrations.
+10. Keep `/docs` and `/openapi.json` disabled in production.
+
+Example:
+
+```bash
+uvicorn app.main:app \
+  --proxy-headers \
+  --forwarded-allow-ips=<PROXY_IP>
+```
+
+## Testing
+
+The test suite uses SQLite by default.
+
+Run all tests:
+
+```bash
+pytest
+```
+
+Run tests with coverage:
+
+```bash
 pytest --cov=app --cov-report=term-missing
+```
 
+Run against PostgreSQL:
 
+```bash
 TEST_DATABASE_URL=postgresql+psycopg2://user:pw@localhost:5432/pos_test pytest
 ```
 
-## Before going to production
+## Database Notes
 
-1. `ENVIRONMENT=production`, a fresh random `SECRET_KEY`, and `?sslmode=require` on `DATABASE_URL` for remote databases.
-2. Serve behind HTTPS (nginx/Caddy/cloud load balancer). Behind a proxy, configure it to pass the client IP
-   (uvicorn `--proxy-headers --forwarded-allow-ips=<proxy ip>`) or the login lockout will see every user as the proxy.
-3. The login lockout is in-process memory: with several workers/containers use a shared limiter (Redis or your proxy/WAF).
-4. Use a least-privilege PostgreSQL user for the app (no superuser / no DDL if you manage the schema yourself).
-5. Adopt Alembic for schema changes: `create_all` only creates missing tables, it never alters existing ones.
-6. Tokens live 30 min and there is no refresh/logout endpoint; add refresh tokens + a deny-list if you need them.
+No database schema changes were introduced in the current version.
 
-## Behaviour worth knowing about (unchanged from the original code)
+Existing databases remain compatible.
 
-* Sale `total_amount`, item `total_price` etc. are **supplied by the client** and not recomputed or reconciled with
-  payments; stock (`inventory.quantity`) is not decremented when items are sold.
-* Deleting a customer/category/supplier that other rows point at sets those rows' link to `NULL` instead of blocking
-  the delete. Deleting a user with sales, or a product with sale items/inventory, is blocked (409).
+`create_all` creates missing tables but does **not** modify existing tables.
+
+For future schema changes, use **Alembic** migrations.
+
+## Current Behaviour
+
+The following behaviours are intentionally unchanged from the original implementation:
+
+### Sales and Inventory
+
+Sale totals and item totals are supplied by the client.
+
+The backend currently does not:
+
+* Recalculate sale totals
+* Reconcile totals with payments
+* Automatically decrement inventory when products are sold
+
+### Deletion Rules
+
+Deleting a customer, category, or supplier that is referenced by other records sets the relationship to `NULL` instead of blocking the deletion.
+
+Deleting a user with existing sales is blocked.
+
+Deleting a product with existing sale items or inventory is blocked.
+
+## API Documentation
+
+When running in development:
+
+```text
+Swagger UI: http://127.0.0.1:8000/docs
+OpenAPI:    http://127.0.0.1:8000/openapi.json
+```
+
+Both documentation endpoints are disabled when:
+
+```env
+ENVIRONMENT=production
+```
+
+## Future Improvements
+
+Potential production enhancements include:
+
+* Refresh tokens
+* Token deny-list / logout support
+* Redis-based distributed rate limiting
+* Alembic migrations
+* Server-side sale total calculation
+* Payment reconciliation
+* Automatic inventory deduction
+* Stronger audit logging
+* Centralized monitoring and observability
+
+
