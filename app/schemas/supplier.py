@@ -1,26 +1,30 @@
 from pydantic import BaseModel, ConfigDict
 
+from .common import LongText, LowerEmail, PatchModel, Str20, Str50, Str100
+
 
 class SupplierBase(BaseModel):
-    name: str
-    contact_person: str | None = None
+    name: Str100
+    contact_person: Str100 | None = None
     email: str | None = None
-    phone: str | None = None
-    address: str | None = None
-    tax_id: str | None = None
+    phone: Str20 | None = None
+    address: LongText | None = None
+    tax_id: Str50 | None = None
 
 
 class SupplierCreate(SupplierBase):
-    pass
+    email: LowerEmail | None = None
 
 
-class SupplierUpdate(BaseModel):
-    name: str | None = None
-    contact_person: str | None = None
-    email: str | None = None
-    phone: str | None = None
-    address: str | None = None
-    tax_id: str | None = None
+class SupplierUpdate(PatchModel):
+    nullable_fields = frozenset({"contact_person", "email", "phone", "address", "tax_id"})
+
+    name: Str100 | None = None
+    contact_person: Str100 | None = None
+    email: LowerEmail | None = None
+    phone: Str20 | None = None
+    address: LongText | None = None
+    tax_id: Str50 | None = None
 
 
 class SupplierRead(SupplierBase):

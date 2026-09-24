@@ -3,11 +3,17 @@ __pycache__/
 *$py.class
 *.so
 .env
+.env.*
+!.env.example
 env/
 venv/
+.venv/
 .vscode/
 .idea/
 *.db
 *.sqlite3
 .DS_Store
 Thumbs.db
+.pytest_cache/
+.coverage
+htmlcov/

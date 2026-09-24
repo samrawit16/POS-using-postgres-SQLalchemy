@@ -2,11 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from .common import Id, PatchModel, ReceiptText, Str50
+
 
 class ReceiptBase(BaseModel):
-    sale_id: int
-    receipt_number: str
-    receipt_data: str
+    sale_id: Id
+    receipt_number: Str50
+    receipt_data: ReceiptText
     emailed_at: datetime | None = None
 
 
@@ -14,10 +16,12 @@ class ReceiptCreate(ReceiptBase):
     pass
 
 
-class ReceiptUpdate(BaseModel):
-    sale_id: int | None = None
-    receipt_number: str | None = None
-    receipt_data: str | None = None
+class ReceiptUpdate(PatchModel):
+    nullable_fields = frozenset({"emailed_at"})
+
+    sale_id: Id | None = None
+    receipt_number: Str50 | None = None
+    receipt_data: ReceiptText | None = None
     emailed_at: datetime | None = None
 
 

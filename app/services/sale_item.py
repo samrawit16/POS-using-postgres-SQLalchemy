@@ -2,6 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.repositories.sale_item import sale_item_repository
+from app.models.user import User
+from app.permissions import ensure_can_modify_sale
 from app.repositories.sale import sale_repository
 from app.repositories.product import product_repository
 from app.schemas.sale_item import SaleItemCreate, SaleItemUpdate
@@ -17,17 +19,18 @@ def get_sale_item(db: Session, id: int):
     return sale_item
 
 
-def list_sale_items(db: Session):
-    return sale_item_repository.get_all(db)
+def list_sale_items(db: Session, skip: int = 0, limit: int = 100):
+    return sale_item_repository.get_all(db, skip=skip, limit=limit)
 
 
-def create_sale_item(db: Session, data: SaleItemCreate):
+def create_sale_item(db: Session, data: SaleItemCreate, actor: User):
     sale = sale_repository.get(db, data.sale_id)
     if not sale:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sale not found"
         )
+    ensure_can_modify_sale(actor, sale)
     product = product_repository.get(db, data.product_id)
     if not product:
         raise HTTPException(

@@ -15,8 +15,8 @@ def get_category(db: Session, id: int):
     return category
 
 
-def list_categories(db: Session):
-    return category_repository.get_all(db)
+def list_categories(db: Session, skip: int = 0, limit: int = 100):
+    return category_repository.get_all(db, skip=skip, limit=limit)
 
 
 def create_category(db: Session, data: CategoryCreate):

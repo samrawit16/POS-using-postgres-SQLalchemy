@@ -17,8 +17,8 @@ def get_product(db: Session, id: int):
     return product
 
 
-def list_products(db: Session):
-    return product_repository.get_all(db)
+def list_products(db: Session, skip: int = 0, limit: int = 100):
+    return product_repository.get_all(db, skip=skip, limit=limit)
 
 
 def create_product(db: Session, data: ProductCreate):

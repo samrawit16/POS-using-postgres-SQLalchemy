@@ -2,12 +2,14 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict
 
+from .common import Id, PatchModel, Quantity, Str100
+
 
 class InventoryBase(BaseModel):
-    product_id: int
-    quantity: int = 0
-    reorder_level: int = 10
-    batch_number: str | None = None
+    product_id: Id
+    quantity: Quantity = 0
+    reorder_level: Quantity = 10
+    batch_number: Str100 | None = None
     expiry_date: date | None = None
 
 
@@ -15,11 +17,13 @@ class InventoryCreate(InventoryBase):
     pass
 
 
-class InventoryUpdate(BaseModel):
-    product_id: int | None = None
-    quantity: int | None = None
-    reorder_level: int | None = None
-    batch_number: str | None = None
+class InventoryUpdate(PatchModel):
+    nullable_fields = frozenset({"batch_number", "expiry_date"})
+
+    product_id: Id | None = None
+    quantity: Quantity | None = None
+    reorder_level: Quantity | None = None
+    batch_number: Str100 | None = None
     expiry_date: date | None = None
 
 

@@ -1,3 +1,4 @@
+from .auth import router as auth_router
 from .category import router as categories_router
 from .supplier import router as suppliers_router
 from .product import router as products_router

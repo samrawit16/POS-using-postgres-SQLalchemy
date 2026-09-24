@@ -16,8 +16,8 @@ def get_inventory(db: Session, id: int):
     return inventory
 
 
-def list_inventory(db: Session):
-    return inventory_repository.get_all(db)
+def list_inventory(db: Session, skip: int = 0, limit: int = 100):
+    return inventory_repository.get_all(db, skip=skip, limit=limit)
 
 
 def create_inventory(db: Session, data: InventoryCreate):

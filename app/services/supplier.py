@@ -15,8 +15,8 @@ def get_supplier(db: Session, id: int):
     return supplier
 
 
-def list_suppliers(db: Session):
-    return supplier_repository.get_all(db)
+def list_suppliers(db: Session, skip: int = 0, limit: int = 100):
+    return supplier_repository.get_all(db, skip=skip, limit=limit)
 
 
 def create_supplier(db: Session, data: SupplierCreate):

@@ -1,6 +1,8 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.dependencies import is_privileged
+from app.models.user import User
 from app.repositories.sale import sale_repository
 from app.repositories.customer import customer_repository
 from app.repositories.user import user_repository
@@ -17,11 +19,16 @@ def get_sale(db: Session, id: int):
     return sale
 
 
-def list_sales(db: Session):
-    return sale_repository.get_all(db)
+def list_sales(db: Session, skip: int = 0, limit: int = 100):
+    return sale_repository.get_all(db, skip=skip, limit=limit)
 
 
-def create_sale(db: Session, data: SaleCreate):
+def create_sale(db: Session, data: SaleCreate, actor: User):
+    if not is_privileged(actor) and data.user_id != actor.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create sales for yourself",
+        )
     if data.customer_id:
         customer = customer_repository.get(db, data.customer_id)
         if not customer:

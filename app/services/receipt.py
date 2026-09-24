@@ -2,6 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.repositories.receipt import receipt_repository
+from app.models.user import User
+from app.permissions import ensure_can_modify_sale
 from app.repositories.sale import sale_repository
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
 
@@ -16,17 +18,18 @@ def get_receipt(db: Session, id: int):
     return receipt
 
 
-def list_receipts(db: Session):
-    return receipt_repository.get_all(db)
+def list_receipts(db: Session, skip: int = 0, limit: int = 100):
+    return receipt_repository.get_all(db, skip=skip, limit=limit)
 
 
-def create_receipt(db: Session, data: ReceiptCreate):
+def create_receipt(db: Session, data: ReceiptCreate, actor: User):
     sale = sale_repository.get(db, data.sale_id)
     if not sale:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sale not found"
         )
+    ensure_can_modify_sale(actor, sale)
     existing = db.query(receipt_repository.model).filter(
         receipt_repository.model.sale_id == data.sale_id
     ).first()

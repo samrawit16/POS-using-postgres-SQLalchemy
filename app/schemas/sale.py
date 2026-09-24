@@ -3,27 +3,31 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
+from .common import Id, Money12, PatchModel
+
 
 class SaleBase(BaseModel):
-    customer_id: int | None = None
-    user_id: int
-    prescription_id: int | None = None
-    tax_amount: Decimal = Decimal("0")
-    discount_amount: Decimal = Decimal("0")
-    total_amount: Decimal = Decimal("0")
+    customer_id: Id | None = None
+    user_id: Id
+    prescription_id: Id | None = None
+    tax_amount: Money12 = Decimal("0")
+    discount_amount: Money12 = Decimal("0")
+    total_amount: Money12 = Decimal("0")
 
 
 class SaleCreate(SaleBase):
     pass
 
 
-class SaleUpdate(BaseModel):
-    customer_id: int | None = None
-    user_id: int | None = None
-    prescription_id: int | None = None
-    tax_amount: Decimal | None = None
-    discount_amount: Decimal | None = None
-    total_amount: Decimal | None = None
+class SaleUpdate(PatchModel):
+    nullable_fields = frozenset({"customer_id", "prescription_id"})
+
+    customer_id: Id | None = None
+    user_id: Id | None = None
+    prescription_id: Id | None = None
+    tax_amount: Money12 | None = None
+    discount_amount: Money12 | None = None
+    total_amount: Money12 | None = None
 
 
 class SaleRead(SaleBase):
